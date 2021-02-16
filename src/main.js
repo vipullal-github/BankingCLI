@@ -1,4 +1,5 @@
 const readLine = require('readline');
+import { isContext } from "vm";
 import {echoHandler, quitHandler, loginHandler, logoutHandler, topupHandler } from "./handlers";
 
 
@@ -22,7 +23,7 @@ const commands = [
         {
             name:'pay',
             handler:echoHandler,
-            regx:/^\s*pay\s+([0-9.]+)\s*$/
+            regx: /pay\s+([a-z]+)\s+(\d+\.?\d+)/
         },
         {
             name:'quit',
@@ -36,7 +37,7 @@ const commands = [
         }
     ];
 
-
+// TODO: make a class
 let AppContext = {
     doneFlag: false,
     currentCommand:"",
@@ -73,29 +74,54 @@ const evalCommand = ( inputText ) => {
         return;
     }
     //console.log(`\nEvaluating cmd [${inputText}]`);
-    // all commands are 
     // debugger;
-    let rxCmdSplitter = /\s*([a-z]+)\s*/
-    let cmdText = rxCmdSplitter.exec(inputText);
-    if( !cmdText ){
+
+
+    AppContext.currentCommand = inputText;  // save it just in case
+    AppContext.rxCapture = undefined;
+    let commandToExecute = undefined;
+    
+    commands.find( (e) => {
+        let m = inputText.match( e.regx );
+        if( m ){
+            AppContext.rxCapture = m;
+            commandToExecute = e;
+        }
+    });
+
+    if( !commandToExecute ){
         displayHelp();
         return;
     }
-    console.log(`executing "${cmdText[1]}" `);
-    let handler = commands.find( (c) => c.name === cmdText[1] );
-    if( !handler ){
-        displayHelp();
-        return;
+
+    try{
+        commandToExecute.handler( AppContext );
     }
-    else{
-        AppContext.currentCommand = inputText;
-        try{
-            handler.handler( AppContext );
-        }
-        catch( e ){
-            console.log(`Woops!  ${e}`)
-        }
+    catch( e ){
+        console.log(`Woops!  ${e}`)
     }
+
+
+    // let rxCmdSplitter = /\s*([a-z]+)\s*/
+    // let cmdText = rxCmdSplitter.exec(inputText);
+    // if( !cmdText ){
+    //     displayHelp();
+    //     return;
+    // }
+    // console.log(`executing "${cmdText[1]}" `);
+    // let handler = commands.find( (c) => c.name === cmdText[1] );
+    // if( !handler ){
+    //     displayHelp();
+    //     return;
+    // }
+    // else{
+    //     try{
+    //         handler.handler( AppContext );
+    //     }
+    //     catch( e ){
+    //         console.log(`Woops!  ${e}`)
+    //     }
+    // }
 }
 
 // --------------------------------------------
