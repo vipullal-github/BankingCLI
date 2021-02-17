@@ -6,13 +6,13 @@ const displayHelp = ()=>{
     let helpText = `
         Welcome to your friendly Banking App. Your money is safe with us!
         Please use the following commands:
-           1.   login <userName>
-           2.   logout
-           3.   topup <amount>
-           4.   pay <userName> <amount>
-           5.   printAll
-           6.   quit
-           7.   help
+           *.   login <userName>
+           *.   logout
+           *.   topup <amount>
+           *.   pay <userName> <amount>
+           *.   printAll
+           *.   quit
+           *.   help
     `;
     console.log(`${helpText}`);
 }
