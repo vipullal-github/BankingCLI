@@ -1,6 +1,20 @@
 const readLine = require('readline');
-import { isContext } from "vm";
-import {echoHandler, quitHandler, loginHandler, logoutHandler, topupHandler } from "./handlers";
+import {echoHandler, quitHandler, loginHandler, logoutHandler, topupHandler, payHandler } from "./handlers";
+
+// --------------------------------------------
+const displayHelp = ()=>{
+    let helpText = `
+        Welcome to your friendly Banking App. Your money is safe with us!
+        Please use the following commands:
+           1.   login <userName>
+           2.   logout
+           3.   topup <amount>
+           4.   pay <userName> <amount>
+           5.   quit
+           6.   help
+    `;
+    console.log(`${helpText}`);
+}
 
 
 const commands = [
@@ -22,8 +36,8 @@ const commands = [
         ,
         {
             name:'pay',
-            handler:echoHandler,
-            regx: /pay\s+([a-z]+)\s+(\d+\.?\d+)/
+            handler:payHandler,
+            regx: /pay\s+([a-z]+)\s+(\d{0,7}\.?\d{0,2})/
         },
         {
             name:'quit',
@@ -32,7 +46,7 @@ const commands = [
         },
         {
             name:'help',
-            handler:echoHandler,
+            handler:displayHelp,
             regx:/^\s*help\s*$/
         }
     ];
@@ -52,20 +66,21 @@ let reader = readLine.createInterface({
     prompt: "> "
 });
 
-
 // --------------------------------------------
-const displayHelp = ( errorText )=>{
-    let helpText = `
-        Please use the following commands:
-           1.   login <userName>
-           2.   logout
-           3.   topup
-           4.   pay <userName>
-           5.   quit
-           6.   help
-    `;
-    console.log(`Invalid input.\n${helpText}`);
+const printUserDetails = () => {
+    let user = AppContext.currentUser;
+    if( user ){
+        console.log(`Your current balance is ${user.currentBalance}`);
+        user.debitRecords.forEach( e => {
+            console.log(`You owe ${e.creditorName} ${e.creditAmount}`);      
+        });
+        user.creditRecords.forEach( e => {
+            console.log(`${e.debitorName} owes you ${e.debitAmount}`);
+        });    
+    }
+    console.log("\n");      // stay neat
 }
+
 
 
 // --------------------------------------------
@@ -96,37 +111,24 @@ const evalCommand = ( inputText ) => {
 
     try{
         commandToExecute.handler( AppContext );
+        printUserDetails();
     }
     catch( e ){
         console.log(`Woops!  ${e}`)
     }
-
-
-    // let rxCmdSplitter = /\s*([a-z]+)\s*/
-    // let cmdText = rxCmdSplitter.exec(inputText);
-    // if( !cmdText ){
-    //     displayHelp();
-    //     return;
-    // }
-    // console.log(`executing "${cmdText[1]}" `);
-    // let handler = commands.find( (c) => c.name === cmdText[1] );
-    // if( !handler ){
-    //     displayHelp();
-    //     return;
-    // }
-    // else{
-    //     try{
-    //         handler.handler( AppContext );
-    //     }
-    //     catch( e ){
-    //         console.log(`Woops!  ${e}`)
-    //     }
-    // }
 }
+
+
+
 
 // --------------------------------------------
 const main = ( args )=>{
     console.log("Welcome to the Banking App...");
+
+    let testCommands = ["login vipul","topup 100", "pay giang 100", "pay bob 30"];
+    testCommands.forEach( (cmd)=>{
+        evalCommand(cmd);
+    })
 
     reader.prompt();
     reader.on('line', (line) =>{
