@@ -1,5 +1,5 @@
 const readLine = require('readline');
-import {echoHandler, quitHandler, loginHandler, logoutHandler, topupHandler, payHandler } from "./handlers";
+import {echoHandler, quitHandler, loginHandler, logoutHandler, topupHandler, payHandler, printAllHandler } from "./handlers";
 
 // --------------------------------------------
 const displayHelp = ()=>{
@@ -10,8 +10,9 @@ const displayHelp = ()=>{
            2.   logout
            3.   topup <amount>
            4.   pay <userName> <amount>
-           5.   quit
-           6.   help
+           5.   printAll
+           6.   quit
+           7.   help
     `;
     console.log(`${helpText}`);
 }
@@ -38,6 +39,11 @@ const commands = [
             name:'pay',
             handler:payHandler,
             regx: /pay\s+([a-z]+)\s+(\d{0,7}\.?\d{0,2})/
+        },
+        {
+            name:'printAll',
+            handler:printAllHandler,
+            regx:/^\s*printAll\s*$/
         },
         {
             name:'quit',
@@ -71,11 +77,11 @@ const printUserDetails = () => {
     let user = AppContext.currentUser;
     if( user ){
         console.log(`Your current balance is ${user.currentBalance}`);
-        user.debitRecords.forEach( e => {
-            console.log(`You owe ${e.creditorName} ${e.creditAmount}`);      
+        user.payableRecords.forEach( e => {
+            console.log(`You owe ${e.payableToName} ${e.payableAmount}`);      
         });
-        user.creditRecords.forEach( e => {
-            console.log(`${e.debitorName} owes you ${e.debitAmount}`);
+        user.receivableRecords.forEach( e => {
+            console.log(`${e.receiveableFromName} owes you ${e.receivableAmount}`);
         });    
     }
     console.log("\n");      // stay neat
@@ -124,9 +130,10 @@ const evalCommand = ( inputText ) => {
 // --------------------------------------------
 const main = ( args )=>{
     console.log("Welcome to the Banking App...");
-
-    let testCommands = ["login vipul","topup 100", "pay giang 100", "pay bob 30"];
+    console.log("(type help to get a summary of all commands)");
+    let testCommands = ["login vipul","topup 100", "pay giang 100", "pay bob 30", "pay bob 10", "printAll"];
     testCommands.forEach( (cmd)=>{
+        console.log(`Running: [${cmd}]`)
         evalCommand(cmd);
     })
 

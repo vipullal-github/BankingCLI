@@ -28,8 +28,15 @@ class Database {
 
     // ---------------------------------
     getUserWithName = (name) =>{
-        return  usersDatabase[name];
+        return  this.usersDatabase[name];
     }
+
+    // ---------------------------------
+    getUsersList(){
+        let userNames = Object.keys( this.usersDatabase );
+        return userNames;
+    }
+
 
 }
 

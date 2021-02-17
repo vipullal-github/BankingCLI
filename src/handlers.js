@@ -1,5 +1,5 @@
 const database = require("./Database");
-const {AppUser,DebitRecord,CreditRecord} = require('./models');
+const {AppUser,PayableRecord,ReceivableRecord} = require('./models');
 const db = new database.Database();
 
 
@@ -48,22 +48,42 @@ const topupHandler = ( context ) =>{
         // should not happen because we used regEX to parse a non-negative number
         throw new Error(`Invalid topup amount ${amt}`);
     }
-    if( usr.debtRecords.empty()){
+    if( usr.payableRecords.length == 0 ){
         usr.currentBalance += amt;
     }
     else{
-        debugger;
-        // adjust the amount amongst the debtors (people who this account owes money)
-        for(let i = 0; i < usr.debtRecords.length && amt; i++ ){
-            let dr = usr.debitRecords[i];
-            let otherUser = db.getUserWithName( dr.creditorName );
+        //debugger;
+        // adjust the amount amongst the payable (people who this account owes money)
+        // NB. This would be faster if We adjust from the rear of the array so that we can pop off
+        // items as they get fulfiled  
+        for(let i = 0; i < usr.payableRecords.length && amt; i++ ){
+            let pr = usr.payableRecords[i];
+            let otherUser = db.getUserWithName( pr.payableToName );
             if( !otherUser ){
-                throw new Error(`Error: Record for ${dr.creditorName} not found!`);
+                // TODO: Throwing an exception here is not the best solution
+                throw new Error(`Error: Record for ${pr.payableToName} not found!`);
             }
-            let adjustedAmt = ( dr.creditAmount <= amt) ? dr.creditAmount: amt;
-            dr.creditAmount -= adjustedAmt;
+            let adjustedAmt = ( pr.payableAmount <= amt) ? pr.payableAmount: amt;
+            pr.payableAmount -= adjustedAmt;
             amt -= adjustedAmt;
-            otherUser.currentBalance += adjustedAmt;            
+            otherUser.currentBalance += adjustedAmt;
+            
+            // adjust the amount adjusted on the other user too.
+            for( let i = 0; i < otherUser.receivableRecords.length; i++ ){
+                let rr = otherUser.receivableRecords[i];
+                if( rr.receiveableFromName === usr.name ){
+                    rr.receivableAmount -= adjustedAmt;
+                    if( rr.receivableAmount === 0){
+                        otherUser.removeEmptyReceivableRecords();
+                    }
+                    break;
+                }
+            }
+        }
+        // remove all the those with 0 balance
+        usr.removeEmptyPayableRecords();
+        if( amt ){
+            usr.currentBalance += amt;
         }
     }
 }
@@ -91,18 +111,47 @@ const payHandler = ( context ) =>{
         user2.currentBalance += amt;
     }
     else{
-        debugger;
+        //debugger;
         let cashAmount = user1.currentBalance;
         user1.currentBalance -= cashAmount;
         user2.currentBalance += cashAmount;
         amt -= cashAmount;
-        let dr = new DebitRecord (user2.name, amt );
-        let cr = new CreditRecord( user1.name, amt );
-        user1.debitRecords.push( dr );  // user1 owes user2 amt 
-        user2.creditRecords.push( cr );
+        let pr = user1.payableRecords.find( (item)=>{
+            return item.payableToName === user2.name;
+        });
+        if( !pr){
+            pr = new PayableRecord (user2.name, amt );
+            user1.payableRecords.push( pr );  // user1 owes user2 amt 
+        }
+        else{
+            pr.payableAmount += amt;
+        }
+        let rr = user2.receivableRecords.find( (item)=>{
+            return item.receiveableFromName === user1.name;
+        });
+        if( !rr ){
+            rr = new ReceivableRecord( user1.name, amt );
+            user2.receivableRecords.push( rr );
+        }
+        else{
+            rr.receivableAmount += amt;
+        }
 
     }
+}
 
-};
 
-module.exports = {echoHandler, quitHandler, loginHandler, logoutHandler, topupHandler, payHandler};
+// --------------------------------------------
+const printAllHandler = ( context ) =>{
+    //debugger;
+    let userNames = db.getUsersList();
+    for (const name of userNames) {
+        let usr = db.getUserWithName(name);
+        console.log( usr);
+        // usr.toConsole();
+        //console.log("-------");
+    }
+    console.log("---- End of records ---");
+}
+
+module.exports = {echoHandler, quitHandler, loginHandler, logoutHandler, topupHandler, payHandler, printAllHandler};
